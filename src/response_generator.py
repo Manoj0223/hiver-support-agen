@@ -3,8 +3,8 @@ from .config import RETRIEVAL_THRESHOLD
 
 def generate_reply(customer_text, intent, retrieved_cases):
     """
-    Generate a conservative support reply grounded in the
-    highest-similarity historical Apple Support response.
+    Generate a conservative support reply grounded in
+    the highest-similarity historical Apple Support response.
     """
 
     if not retrieved_cases:
@@ -19,7 +19,7 @@ def generate_reply(customer_text, intent, retrieved_cases):
     if best_similarity < RETRIEVAL_THRESHOLD:
         return None
 
-    # If the historical response is unavailable, fail safely.
+    # Fail safely if historical response is unavailable.
     if not historical_response:
         return None
 
