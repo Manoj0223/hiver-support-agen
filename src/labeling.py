@@ -1,6 +1,3 @@
-import re
-
-
 INTENTS = {
     "ios_update": (
         "Problems with iOS or software updates, including failed updates, "
@@ -42,114 +39,64 @@ INTENTS = {
 
 def assign_initial_intent(text):
     """
-    Assign a weak initial intent using keyword-based rules.
-
-    These labels are used for classifier training and are not treated
-    as human-verified gold labels.
+    Exact weak-labeling logic used in the Kaggle development pipeline.
     """
 
-    text = str(text).lower().strip()
+    text = str(text).lower()
 
-    if not text:
-        return "other"
+    if any(k in text for k in [
+        "update", "ios", "software update", "upgrade", "install ios"
+    ]):
+        return "ios_update"
 
-    patterns = {
-        "battery_charging": [
-            "battery",
-            "charging",
-            "charge",
-            "battery life",
-            "battery health",
-        ],
-        "ios_update": [
-            "ios",
-            "update",
-            "updating",
-            "software update",
-            "upgrade",
-        ],
-        "wifi_connectivity": [
-            "wifi",
-            "wi-fi",
-            "bluetooth",
-            "cellular",
-            "internet",
-            "network",
-            "connection",
-            "connectivity",
-        ],
-        "apps": [
-            "app",
-            "application",
-            "crash",
-            "crashing",
-            "freeze",
-            "freezing",
-            "not opening",
-        ],
-        "device_hardware": [
-            "screen",
-            "display",
-            "keyboard",
-            "button",
-            "speaker",
-            "camera",
-            "overheating",
-            "broken",
-        ],
-        "apple_services": [
-            "icloud",
-            "itunes",
-            "apple music",
-            "app store",
-            "apple pay",
-            "photos",
-        ],
-        "account_payment": [
-            "apple id",
-            "password",
-            "billing",
-            "payment",
-            "charged",
-            "charge",
-            "refund",
-            "subscription",
-            "purchase",
-            "credit card",
-            "account locked",
-            "sign in",
-            "login",
-        ],
-        "how_to": [
-            "how do i",
-            "how can i",
-            "how to",
-            "is there a way",
-            "can i change",
-            "where can i",
-        ],
-    }
+    if any(k in text for k in [
+        "battery", "charging", "charger", "charge", "battery health"
+    ]):
+        return "battery_charging"
 
-    # Check more specific intents first.
-    priority = [
-        "account_payment",
-        "battery_charging",
-        "ios_update",
-        "wifi_connectivity",
-        "apple_services",
-        "device_hardware",
-        "apps",
-        "how_to",
-    ]
+    if any(k in text for k in [
+        "wifi", "wi-fi", "bluetooth", "internet", "cellular",
+        "mobile data", "network", "signal"
+    ]):
+        return "wifi_connectivity"
 
-    for intent in priority:
-        if any(pattern in text for pattern in patterns[intent]):
-            return intent
+    if any(k in text for k in [
+        "app", "application", "crash", "freezing", "freeze",
+        "not opening", "won't open"
+    ]):
+        return "apps"
+
+    if any(k in text for k in [
+        "screen", "display", "keyboard", "button", "overheating",
+        "overheat", "broken", "cracked", "speaker", "camera"
+    ]):
+        return "device_hardware"
+
+    if any(k in text for k in [
+        "icloud", "itunes", "apple music", "app store",
+        "photos", "facetime", "imessage", "apple pay"
+    ]):
+        return "apple_services"
+
+    if any(k in text for k in [
+        "apple id", "password", "login", "sign in", "account",
+        "billing", "payment", "subscription", "refund", "charged"
+    ]):
+        return "account_payment"
+
+    if any(k in text for k in [
+        "how do i", "how can i", "how to", "where can i",
+        "can i change", "how can"
+    ]):
+        return "how_to"
 
     return "other"
 
 
 def create_weak_labels(texts):
-    """Create weak intent labels for a collection of messages."""
+    """Create weak labels using the Kaggle development rules."""
 
-    return [assign_initial_intent(text) for text in texts]
+    return [
+        assign_initial_intent(text)
+        for text in texts
+    ]
