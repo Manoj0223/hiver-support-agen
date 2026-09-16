@@ -10,18 +10,18 @@ def build_classifier():
         min_df=2,
         max_features=80000,
         sublinear_tf=True,
-        strip_accents="unicode"
+        strip_accents="unicode",
     )
 
     classifier = LogisticRegression(
         max_iter=1500,
         class_weight="balanced",
-        C=2.0
+        C=2.0,
     )
 
     return Pipeline([
         ("tfidf", vectorizer),
-        ("classifier", classifier)
+        ("classifier", classifier),
     ])
 
 
@@ -32,10 +32,9 @@ def train_classifier(texts, labels):
 
 
 def predict_intents(model, texts):
-
     predictions = model.predict(texts)
-
     probabilities = model.predict_proba(texts)
+
     confidence = probabilities.max(axis=1)
 
     corrected_predictions = []
@@ -44,7 +43,6 @@ def predict_intents(model, texts):
 
         text_lower = str(text).lower()
 
-        # Conservative app-specific signals
         clear_app_signals = [
             "app crashes",
             "apps crash",
@@ -65,11 +63,9 @@ def predict_intents(model, texts):
             "application crash",
             "application not opening",
             "application won't open",
-            "application wont open"
+            "application wont open",
         ]
 
-        # If the model predicts apps but there is no
-        # clear app-specific failure, use other.
         if prediction == "apps":
             if not any(
                 signal in text_lower
@@ -79,7 +75,4 @@ def predict_intents(model, texts):
 
         corrected_predictions.append(prediction)
 
-    return (
-        corrected_predictions,
-        probabilities.max(axis=1)
-    )
+    return corrected_predictions, confidence
