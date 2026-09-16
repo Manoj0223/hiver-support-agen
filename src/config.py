@@ -1,0 +1,11 @@
+# Hiver Support Agent Configuration
+
+SELECTED_BRAND = ""
+
+SAMPLE_SIZE = 10000
+
+TOP_K = 5
+
+CONFIDENCE_THRESHOLD = 0.75
+
+RETRIEVAL_THRESHOLD = 0.55
