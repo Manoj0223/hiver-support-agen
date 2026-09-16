@@ -14,7 +14,12 @@ env/
 # Datasets
 data/raw/
 data/processed/
-*.csv
+# Raw Kaggle dataset
+data/raw/twcs.csv
+
+# Generated evaluation outputs
+evaluation_results.csv
+apple_support_final_evaluation.csv
 
 # Evaluation outputs
 evaluation_results.csv
