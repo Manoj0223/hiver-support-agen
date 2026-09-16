@@ -5,63 +5,42 @@ from sklearn.pipeline import Pipeline
 
 def build_classifier():
     """
-    Build the TF-IDF + Logistic Regression intent classifier.
+    Build the intent classifier.
+
+    Word + character n-grams help with short/noisy Twitter messages,
+    while class balancing prevents frequent intents from dominating.
     """
-    return Pipeline(
-        [
-            (
-                "tfidf",
-                TfidfVectorizer(
-                    ngram_range=(1, 2),
-                    min_df=3,
-                    max_features=50_000,
-                    sublinear_tf=True,
-                ),
-            ),
-            (
-                "classifier",
-                LogisticRegression(
-                    max_iter=1000,
-                    class_weight="balanced",
-                ),
-            ),
-        ]
+
+    vectorizer = TfidfVectorizer(
+        analyzer="word",
+        ngram_range=(1, 2),
+        min_df=2,
+        max_features=80000,
+        sublinear_tf=True,
+        strip_accents="unicode"
     )
+
+    classifier = LogisticRegression(
+        max_iter=1500,
+        class_weight="balanced",
+        C=2.0
+    )
+
+    return Pipeline([
+        ("tfidf", vectorizer),
+        ("classifier", classifier)
+    ])
 
 
 def train_classifier(texts, labels):
-    """
-    Train the intent classifier.
-
-    Parameters
-    ----------
-    texts : iterable
-        Cleaned customer messages.
-    labels : iterable
-        Intent labels.
-
-    Returns
-    -------
-    Pipeline
-        Trained classifier.
-    """
     model = build_classifier()
     model.fit(texts, labels)
     return model
 
 
 def predict_intents(model, texts):
-    """
-    Predict intents and confidence scores.
-
-    Returns
-    -------
-    predictions : array
-        Predicted intent for each message.
-    confidence : array
-        Maximum class probability for each prediction.
-    """
     predictions = model.predict(texts)
+
     probabilities = model.predict_proba(texts)
     confidence = probabilities.max(axis=1)
 
