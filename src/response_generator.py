@@ -3,33 +3,43 @@ from .config import RETRIEVAL_THRESHOLD
 
 def generate_reply(customer_text, intent, retrieved_cases):
     """
-    Generate a conservative support reply using historical evidence.
-
-    The current implementation only generates a reply when a sufficiently
-    similar historical case is available. It intentionally avoids inventing
-    troubleshooting steps that are not supported by the retrieved evidence.
+    Generate a conservative support reply grounded in the
+    highest-similarity historical Apple Support response.
     """
 
     if not retrieved_cases:
         return None
 
     best_case = retrieved_cases[0]
-    best_similarity = best_case["similarity"]
 
+    best_similarity = best_case.get("similarity", 0.0)
+    historical_response = best_case.get("support_response")
+
+    # Do not generate a reply when historical evidence is weak.
     if best_similarity < RETRIEVAL_THRESHOLD:
         return None
 
+    # If the historical response is unavailable, fail safely.
+    if not historical_response:
+        return None
+
+    historical_response = str(historical_response).strip()
+
+    if not historical_response:
+        return None
+
     return (
-        "Thanks for reaching out. We'd be happy to help with this. "
-        "Based on similar Apple Support cases, we'd like to look into "
-        "the issue further. Please share any relevant device or software "
-        "details so we can investigate."
+        "Thanks for reaching out. Based on a similar Apple Support case, "
+        "here is the relevant guidance:\n\n"
+        f"{historical_response}\n\n"
+        "If the issue persists, please share your device model and "
+        "software version so the issue can be investigated further."
     )
 
 
 def generate_reply_from_results(customer_text, intent, results):
     """
-    Generate a reply from retrieval results returned by HistoricalRetriever.
+    Generate a reply from retrieved historical cases.
     """
 
     return generate_reply(
