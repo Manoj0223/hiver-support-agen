@@ -28,11 +28,21 @@ def main():
 
     args = parser.parse_args()
 
-    print("Loading Apple Support conversations...")
-
     pairs = load_apple_support_pairs(args.data)
 
-    print(f"Usable Apple Support pairs: {len(pairs):,}")
+print(f"Usable Apple Support pairs: {len(pairs):,}")
+
+# Use a deterministic sample for the interactive demo.
+# Full data is still used by evaluate.py for the reported evaluation.
+from src.config import DEMO_SAMPLE_SIZE
+
+if len(pairs) > DEMO_SAMPLE_SIZE:
+    pairs = pairs.sample(
+        n=DEMO_SAMPLE_SIZE,
+        random_state=42,
+    ).reset_index(drop=True)
+
+print(f"Demo training/retrieval rows: {len(pairs):,}")
 
     # ---------------------------------------------------------
     # 1. Create weak labels for classifier training
