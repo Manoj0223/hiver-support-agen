@@ -15,11 +15,9 @@ def generate_reply(customer_text, intent, retrieved_cases):
     best_similarity = best_case.get("similarity", 0.0)
     historical_response = best_case.get("support_response")
 
-    # Do not generate a reply when historical evidence is weak.
     if best_similarity < RETRIEVAL_THRESHOLD:
         return None
 
-    # Fail safely if historical response is unavailable.
     if not historical_response:
         return None
 
