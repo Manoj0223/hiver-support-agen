@@ -4,25 +4,29 @@ from sklearn.pipeline import Pipeline
 
 
 def build_classifier():
-    vectorizer = TfidfVectorizer(
-        analyzer="word",
-        ngram_range=(1, 2),
-        min_df=2,
-        max_features=80000,
-        sublinear_tf=True,
-        strip_accents="unicode",
+    """
+    Build the TF-IDF + Logistic Regression intent classifier.
+    """
+    return Pipeline(
+        [
+            (
+                "tfidf",
+                TfidfVectorizer(
+                    ngram_range=(1, 2),
+                    min_df=2,
+                    max_features=100_000,
+                    sublinear_tf=True,
+                ),
+            ),
+            (
+                "classifier",
+                LogisticRegression(
+                    max_iter=1000,
+                    C=2.0,
+                ),
+            ),
+        ]
     )
-
-    classifier = LogisticRegression(
-        max_iter=1500,
-        class_weight="balanced",
-        C=2.0,
-    )
-
-    return Pipeline([
-        ("tfidf", vectorizer),
-        ("classifier", classifier),
-    ])
 
 
 def train_classifier(texts, labels):
