@@ -1,5 +1,67 @@
 # Hiver AI Support Agent — Apple Support
 
+## Reproduction
+
+### 1. Get the dataset
+
+Download the Kaggle **Customer Support on Twitter** dataset:
+
+`thoughtvector/customer-support-on-twitter`
+
+The raw `twcs.csv` file is intentionally not included in this repository because of its size.
+
+Place the file locally at:
+
+`text
+data/raw/twcs.csv
+2. Install dependencies
+pip install -r requirements.txt
+3. Run the agent
+python run.py --data data/raw/twcs.csv`
+
+`You can also provide a custom customer message:`
+
+`python run.py \
+  --data data/raw/twcs.csv \
+  --query "My iPhone battery is draining very quickly."
+4. Run golden-set evaluation`
+
+`The evaluation dataset is stored at:`
+
+`data/golden/apple_support_golden_200_current.csv`
+
+`Run:`
+
+`python evaluate.py \
+  --data data/raw/twcs.csv \
+  --golden data/golden/apple_support_golden_200_current.csv`
+
+`The evaluation script reports:`
+
+`Intent accuracy
+Macro F1
+Weighted F1`
+
+`and saves:`
+
+`evaluation_results.csv
+Runtime note`
+
+`The repository contains the complete pipeline, but the large Kaggle dataset must be downloaded separately before running the full pipeline.`
+
+`The reported headline results were generated in Kaggle using the same dataset and methodology described in this README.`
+
+
+### Important
+
+Don't claim **“reproduces headline results in <15 minutes”** unless you've actually tested that runtime from a clean environment.
+
+Your current README should be **honest and reproducible**, rather than promising a runtime we haven't verified.
+
+After updating this section, **commit the README**.
+
+Then we'll fix one important code issue: the current `run.py` trains on the entire Apple
+
 An AI customer-support agent built for the Hiver SDE Intern take-home assignment using the Customer Support on Twitter dataset.
 
 The system performs three tasks:
