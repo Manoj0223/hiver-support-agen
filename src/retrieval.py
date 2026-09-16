@@ -8,8 +8,12 @@ class HistoricalRetriever:
     TF-IDF based retriever for historical Apple Support conversations.
     """
 
-    def __init__(self, texts):
+    def __init__(self, texts, responses=None):
         self.texts = list(texts)
+        self.responses = list(responses) if responses is not None else [None] * len(self.texts)
+
+        if len(self.texts) != len(self.responses):
+            raise ValueError("texts and responses must have the same length")
 
         self.vectorizer = TfidfVectorizer(
             ngram_range=(1, 2),
@@ -24,13 +28,15 @@ class HistoricalRetriever:
         """
         Retrieve the most similar historical customer messages.
 
-        Returns a list of dictionaries containing:
+        Returns:
         - index
         - customer_text
+        - support_response
         - similarity
         """
 
         query_vector = self.vectorizer.transform([query])
+
         similarities = cosine_similarity(
             query_vector,
             self.matrix
@@ -45,6 +51,7 @@ class HistoricalRetriever:
                 {
                     "index": int(idx),
                     "customer_text": self.texts[idx],
+                    "support_response": self.responses[idx],
                     "similarity": float(similarities[idx]),
                 }
             )
