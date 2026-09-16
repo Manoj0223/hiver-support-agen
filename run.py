@@ -97,10 +97,13 @@ def main():
         top_k=TOP_K,
     )
 
-    best_similarity = results[0]["similarity"]
+    if results:
+        best_similarity = results[0]["similarity"]
+    else:
+        best_similarity = 0.0
 
     # ---------------------------------------------------------
-    # 6. Generate draft response
+    # 6. Generate grounded draft response
     # ---------------------------------------------------------
 
     reply = generate_reply_from_results(
@@ -166,7 +169,7 @@ def main():
         if result.get("support_response"):
             print(
                 f"   Historical response: "
-                f"{result['support_response'][:200]}"
+                f"{result['support_response'][:250]}"
             )
 
 
