@@ -12,54 +12,172 @@ INTENTS = {
 
 
 def assign_initial_intent(text):
-    t = str(text).lower()
+    """
+    Assign a weak initial intent using keyword-based rules.
 
-    if any(k in t for k in [
-        "battery", "charge", "charging", "charger", "power"
-    ]):
+    These labels are used for classifier training and are not treated
+    as human-verified gold labels.
+    """
+
+    text = str(text).lower().strip()
+
+    if not text:
+        return "other"
+
+    # 1. Battery / charging
+    battery_patterns = [
+        "battery",
+        "battery life",
+        "battery health",
+        "battery drain",
+        "battery draining",
+        "dies quickly",
+        "dying fast",
+        "won't charge",
+        "not charging",
+        "doesn't charge",
+        "doesnt charge",
+        "charge my phone",
+        "charger",
+        "wireless charging",
+    ]
+    if any(p in text for p in battery_patterns):
         return "battery_charging"
 
-    if any(k in t for k in [
-        "ios", "update", "updated", "upgrade"
-    ]):
+    # 2. iOS / software updates
+    ios_patterns = [
+        "ios",
+        "ios update",
+        "software update",
+        "software upgrade",
+        "updated to",
+        "updating to",
+        "after updating",
+        "after the update",
+        "after update",
+        "new update",
+        "latest update",
+        "upgrade to",
+    ]
+    if any(p in text for p in ios_patterns):
         return "ios_update"
 
-    if any(k in t for k in [
-        "wifi", "wi-fi", "bluetooth", "cellular",
-        "mobile data", "internet", "network", "signal"
-    ]):
+    # 3. Connectivity
+    connectivity_patterns = [
+        "wifi",
+        "wi-fi",
+        "bluetooth",
+        "cellular",
+        "mobile data",
+        "internet",
+        "network",
+        "connection",
+        "connectivity",
+        "no signal",
+        "signal",
+    ]
+    if any(p in text for p in connectivity_patterns):
         return "wifi_connectivity"
 
-    if any(k in t for k in [
-        "apple id", "password", "sign in", "login",
-        "account", "payment", "billing", "charged",
-        "refund", "subscription", "purchase"
-    ]):
-        return "account_payment"
-
-    if any(k in t for k in [
-        "icloud", "itunes", "apple music", "app store",
-        "imessage", "facetime", "apple pay", "photos"
-    ]):
+    # 4. Apple services
+    service_patterns = [
+        "icloud",
+        "itunes",
+        "apple music",
+        "app store",
+        "apple pay",
+        "apple pay cash",
+        "imessage",
+        "facetime",
+        "find my iphone",
+        "find my",
+        "photos",
+        "apple watch",
+    ]
+    if any(p in text for p in service_patterns):
         return "apple_services"
 
-    if any(k in t for k in [
-        "app", "application", "snapchat", "instagram",
-        "facebook", "twitter", "spotify", "crash", "freeze"
-    ]):
-        return "apps"
+    # 5. Account / payment
+    account_patterns = [
+        "apple id",
+        "password",
+        "billing",
+        "payment",
+        "refund",
+        "subscription",
+        "purchase",
+        "credit card",
+        "account locked",
+        "sign in",
+        "sign-in",
+        "login",
+        "verification",
+        "verify my account",
+    ]
+    if any(p in text for p in account_patterns):
+        return "account_payment"
 
-    if any(k in t for k in [
-        "screen", "display", "keyboard", "button",
-        "camera", "speaker", "microphone", "overheat",
-        "broken", "crack", "not turning on"
-    ]):
+    # 6. Hardware / device
+    hardware_patterns = [
+        "screen",
+        "display",
+        "keyboard",
+        "keyboard problem",
+        "can't type",
+        "cannot type",
+        "wont type",
+        "won't type",
+        "autocorrect",
+        "question mark",
+        "question mark emoji",
+        "emoji",
+        "speaker",
+        "camera",
+        "microphone",
+        "button",
+        "overheating",
+        "broken",
+        "won't turn on",
+        "wont turn on",
+        "won't come on",
+        "wont come on",
+        "restarting",
+        "resetting",
+        "crackling",
+    ]
+    if any(p in text for p in hardware_patterns):
         return "device_hardware"
 
-    if any(k in t for k in [
-        "how do i", "how can i", "how to", "where do i",
-        "can i", "setting"
-    ]):
+    # 7. Apps
+    app_patterns = [
+        "app",
+        "application",
+        "crash",
+        "crashing",
+        "freeze",
+        "freezing",
+        "not opening",
+        "won't open",
+        "wont open",
+        "unable to download app",
+        "apps won't install",
+        "apps wont install",
+    ]
+    if any(p in text for p in app_patterns):
+        return "apps"
+
+    # 8. How-to
+    how_to_patterns = [
+        "how do i",
+        "how can i",
+        "how to",
+        "is there a way",
+        "can i change",
+        "where can i",
+        "where do i",
+        "can i check",
+    ]
+    if any(p in text for p in how_to_patterns):
         return "how_to"
 
     return "other"
