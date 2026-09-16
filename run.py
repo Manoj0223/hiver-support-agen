@@ -1,7 +1,7 @@
 import argparse
 
 from src.classifier import train_classifier, predict_intents
-from src.config import TOP_K
+from src.config import DEMO_SAMPLE_SIZE, TOP_K
 from src.data_loader import load_apple_support_pairs
 from src.escalation import should_escalate
 from src.labeling import create_weak_labels
@@ -28,24 +28,32 @@ def main():
 
     args = parser.parse_args()
 
+    # ---------------------------------------------------------
+    # 1. Load Apple Support conversations
+    # ---------------------------------------------------------
+
+    print("Loading Apple Support conversations...")
+
     pairs = load_apple_support_pairs(args.data)
 
-print(f"Usable Apple Support pairs: {len(pairs):,}")
-
-# Use a deterministic sample for the interactive demo.
-# Full data is still used by evaluate.py for the reported evaluation.
-from src.config import DEMO_SAMPLE_SIZE
-
-if len(pairs) > DEMO_SAMPLE_SIZE:
-    pairs = pairs.sample(
-        n=DEMO_SAMPLE_SIZE,
-        random_state=42,
-    ).reset_index(drop=True)
-
-print(f"Demo training/retrieval rows: {len(pairs):,}")
+    print(f"Usable Apple Support pairs: {len(pairs):,}")
 
     # ---------------------------------------------------------
-    # 1. Create weak labels for classifier training
+    # 2. Sample data for interactive demo
+    # ---------------------------------------------------------
+
+    if len(pairs) > DEMO_SAMPLE_SIZE:
+        pairs = pairs.sample(
+            n=DEMO_SAMPLE_SIZE,
+            random_state=42,
+        ).reset_index(drop=True)
+
+    print(
+        f"Demo training/retrieval rows: {len(pairs):,}"
+    )
+
+    # ---------------------------------------------------------
+    # 3. Create weak intent labels
     # ---------------------------------------------------------
 
     print("\nCreating weak intent labels...")
@@ -55,7 +63,7 @@ print(f"Demo training/retrieval rows: {len(pairs):,}")
     )
 
     # ---------------------------------------------------------
-    # 2. Train intent classifier
+    # 4. Train intent classifier
     # ---------------------------------------------------------
 
     print("Training intent classifier...")
@@ -74,7 +82,7 @@ print(f"Demo training/retrieval rows: {len(pairs):,}")
     predicted_confidence = float(confidence[0])
 
     # ---------------------------------------------------------
-    # 3. Build historical retrieval index
+    # 5. Build historical retrieval index
     # ---------------------------------------------------------
 
     print("Building historical retrieval index...")
@@ -91,7 +99,7 @@ print(f"Demo training/retrieval rows: {len(pairs):,}")
     best_similarity = results[0]["similarity"]
 
     # ---------------------------------------------------------
-    # 4. Generate reply
+    # 6. Generate draft response
     # ---------------------------------------------------------
 
     reply = generate_reply_from_results(
@@ -101,7 +109,7 @@ print(f"Demo training/retrieval rows: {len(pairs):,}")
     )
 
     # ---------------------------------------------------------
-    # 5. Escalation decision
+    # 7. Decide escalation
     # ---------------------------------------------------------
 
     escalate, escalation_reason = should_escalate(
@@ -110,33 +118,41 @@ print(f"Demo training/retrieval rows: {len(pairs):,}")
     )
 
     # ---------------------------------------------------------
-    # 6. Display result
+    # 8. Display agent result
     # ---------------------------------------------------------
 
     print("\n" + "=" * 60)
     print("APPLE SUPPORT AI AGENT")
     print("=" * 60)
 
-    print(f"\nCustomer message:")
+    print("\nCustomer message:")
     print(args.query)
 
-    print(f"\nPredicted intent:")
+    print("\nPredicted intent:")
     print(predicted_intent)
 
-    print(f"Intent confidence:")
+    print("\nIntent confidence:")
     print(f"{predicted_confidence:.3f}")
 
-    print(f"\nBest historical similarity:")
+    print("\nBest historical similarity:")
     print(f"{best_similarity:.3f}")
 
     print("\nDraft reply:")
-    print(reply if reply else "[No automated reply generated]")
+
+    if reply:
+        print(reply)
+    else:
+        print("[No automated reply generated]")
 
     print("\nEscalation:")
     print("YES" if escalate else "NO")
 
-    print(f"Reason:")
+    print("\nEscalation reason:")
     print(escalation_reason)
+
+    # ---------------------------------------------------------
+    # 9. Display retrieved historical examples
+    # ---------------------------------------------------------
 
     print("\nTop historical matches:")
 
