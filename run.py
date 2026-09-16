@@ -4,6 +4,7 @@ from src.classifier import train_classifier, predict_intents
 from src.config import TOP_K
 from src.data_loader import load_apple_support_pairs
 from src.escalation import should_escalate
+from src.labeling import create_weak_labels
 from src.retrieval import HistoricalRetriever
 from src.response_generator import generate_reply_from_results
 
@@ -34,16 +35,24 @@ def main():
     print(f"Usable Apple Support pairs: {len(pairs):,}")
 
     # ---------------------------------------------------------
-    # 1. Train intent classifier
+    # 1. Create weak labels for classifier training
     # ---------------------------------------------------------
 
-    print("\nTraining intent classifier...")
+    print("\nCreating weak intent labels...")
+
+    pairs["intent"] = create_weak_labels(
+        pairs["clean_customer_text"]
+    )
+
+    # ---------------------------------------------------------
+    # 2. Train intent classifier
+    # ---------------------------------------------------------
+
+    print("Training intent classifier...")
 
     classifier = train_classifier(
         pairs["clean_customer_text"],
-        pairs["intent"] if "intent" in pairs.columns else _create_fallback_labels(
-            pairs["clean_customer_text"]
-        ),
+        pairs["intent"],
     )
 
     prediction, confidence = predict_intents(
@@ -55,7 +64,7 @@ def main():
     predicted_confidence = float(confidence[0])
 
     # ---------------------------------------------------------
-    # 2. Build historical retrieval index
+    # 3. Build historical retrieval index
     # ---------------------------------------------------------
 
     print("Building historical retrieval index...")
@@ -72,7 +81,7 @@ def main():
     best_similarity = results[0]["similarity"]
 
     # ---------------------------------------------------------
-    # 3. Generate response
+    # 4. Generate reply
     # ---------------------------------------------------------
 
     reply = generate_reply_from_results(
@@ -82,7 +91,7 @@ def main():
     )
 
     # ---------------------------------------------------------
-    # 4. Escalation decision
+    # 5. Escalation decision
     # ---------------------------------------------------------
 
     escalate, escalation_reason = should_escalate(
@@ -91,7 +100,7 @@ def main():
     )
 
     # ---------------------------------------------------------
-    # Output
+    # 6. Display result
     # ---------------------------------------------------------
 
     print("\n" + "=" * 60)
@@ -126,112 +135,6 @@ def main():
             f"{i}. similarity={result['similarity']:.3f} | "
             f"{result['customer_text'][:120]}"
         )
-
-
-def _create_fallback_labels(texts):
-    """
-    Temporary fallback for the demo.
-
-    The production evaluation uses the weak-label taxonomy created
-    during the project. This fallback keeps run.py executable before
-    the labeling module is added.
-    """
-
-    labels = []
-
-    for text in texts:
-        text = text.lower()
-
-        if any(
-            word in text
-            for word in [
-                "battery",
-                "charging",
-                "charge",
-            ]
-        ):
-            labels.append("battery_charging")
-
-        elif any(
-            word in text
-            for word in [
-                "update",
-                "ios",
-                "software",
-            ]
-        ):
-            labels.append("ios_update")
-
-        elif any(
-            word in text
-            for word in [
-                "wifi",
-                "bluetooth",
-                "internet",
-                "network",
-            ]
-        ):
-            labels.append("wifi_connectivity")
-
-        elif any(
-            word in text
-            for word in [
-                "app",
-                "application",
-                "crash",
-                "freezing",
-            ]
-        ):
-            labels.append("apps")
-
-        elif any(
-            word in text
-            for word in [
-                "icloud",
-                "itunes",
-                "apple music",
-                "app store",
-            ]
-        ):
-            labels.append("apple_services")
-
-        elif any(
-            word in text
-            for word in [
-                "payment",
-                "billing",
-                "refund",
-                "subscription",
-                "apple id",
-            ]
-        ):
-            labels.append("account_payment")
-
-        elif any(
-            word in text
-            for word in [
-                "screen",
-                "keyboard",
-                "button",
-                "overheating",
-            ]
-        ):
-            labels.append("device_hardware")
-
-        elif any(
-            word in text
-            for word in [
-                "how do i",
-                "how can i",
-                "how to",
-            ]
-        ):
-            labels.append("how_to")
-
-        else:
-            labels.append("other")
-
-    return labels
 
 
 if __name__ == "__main__":
