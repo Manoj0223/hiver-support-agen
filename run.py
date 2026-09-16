@@ -88,7 +88,8 @@ def main():
     print("Building historical retrieval index...")
 
     retriever = HistoricalRetriever(
-        pairs["clean_customer_text"]
+        pairs["clean_customer_text"],
+        pairs["support_response"],
     )
 
     results = retriever.search(
@@ -161,6 +162,12 @@ def main():
             f"{i}. similarity={result['similarity']:.3f} | "
             f"{result['customer_text'][:120]}"
         )
+
+        if result.get("support_response"):
+            print(
+                f"   Historical response: "
+                f"{result['support_response'][:200]}"
+            )
 
 
 if __name__ == "__main__":
