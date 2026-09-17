@@ -1,41 +1,41 @@
 # Hiver AI Support Agent — Apple Support
 
-An AI customer-support agent built for the Hiver SDE Intern take-home assignment using the Customer Support on Twitter dataset.
+An AI customer-support agent built for the Hiver SDE Intern take-home assignment using the **Customer Support on Twitter** dataset.
 
-The system performs three tasks:
+The prototype performs three tasks:
 
 1. Classifies incoming customer messages into a compact set of support intents.
 2. Retrieves historically similar Apple Support conversations as evidence for a response.
-3. Decides whether the case can be auto-handled or should be escalated to a human.
+3. Decides whether the case can be auto-handled or should be escalated to a human, with a reason.
+
+This is a prototype and is not intended to replace production customer-support systems.
 
 ---
 
 ## 1. Problem Framing
 
-Customer-support teams receive a large volume of repetitive requests. A useful support agent should identify the customer's issue, use previously handled cases as evidence, provide a conservative response, and avoid answering automatically when sufficient evidence is unavailable.
+Customer-support teams receive large volumes of repetitive requests. A useful support agent should:
+
+- identify the customer's issue,
+- use previously resolved cases as evidence,
+- draft a conservative response,
+- avoid answering automatically when sufficient evidence is unavailable.
 
 For this project, I selected **Apple Support** from the Customer Support on Twitter dataset.
 
-The objective is to demonstrate a reproducible prototype for:
+The goal is to demonstrate an end-to-end support workflow covering:
 
-- intent classification
-- retrieval-grounded response generation
-- escalation decisions
-- evaluation against a manually reviewed golden set
-
-This is not intended to be a production replacement for Apple Support.
+**Intent Classification → Historical Retrieval → Response Generation → Escalation**
 
 ---
 
 ## 2. Dataset
 
-Dataset:
-
-**Customer Support on Twitter — Kaggle / ThoughtVector**
+Dataset: **Customer Support on Twitter — Kaggle / ThoughtVector**
 
 The dataset contains customer tweets and support-agent responses.
 
-The raw `twcs.csv` file is not included in this repository because of its size.
+The raw `twcs.csv` file is intentionally excluded from Git because of its size.
 
 ### Apple Support extraction
 
@@ -46,14 +46,16 @@ Apple Support replies are identified using:
 (df["author_id"].astype(str) == "AppleSupport")`
 Customer tweets are paired with support responses using:
 
-in_response_to_tweet_id
-        ↓
-tweet_id
+in_response_to_tweet_id → tweet_id
 
-The current dataset contains:
+Current dataset:
 
-105,212 usable Apple Support customer → support-response pairs.
-
+Dataset component	Rows
+Apple Support pairs	105,212
+Golden examples	200
+Leakage-safe pool	105,012
+Training rows	84,009
+Internal test rows	21,003
 Text preprocessing
 
 The preprocessing:
@@ -66,7 +68,7 @@ removes punctuation
 normalizes whitespace
 3. Intent Taxonomy
 
-A compact nine-intent taxonomy was created from recurring support themes in the Apple Support conversations.
+A compact nine-intent taxonomy was created from recurring support themes.
 
 Intent	Description
 ios_update	iOS/software update problems
@@ -79,9 +81,13 @@ account_payment	Apple ID, account, billing, subscriptions and payments
 how_to	Questions asking how to perform a feature or task
 other	Ambiguous or insufficiently specific cases
 
-The initial large training corpus is weak-labelled using rule-based patterns derived from these intent definitions.
+The large training corpus is weak-labelled using rule-based patterns derived from these intent definitions.
 
-The 200-example evaluation set uses human-reviewed intent labels.
+Golden set
+
+A 200-example evaluation set was sampled from Apple Support conversation pairs.
+
+Labels were initially generated using the project taxonomy and weak-label rules, with a subset manually audited. The current results should therefore be treated as a prototype evaluation rather than a fully independently hand-labelled benchmark.
 
 4. System Architecture
 Customer Message
@@ -89,29 +95,28 @@ Customer Message
        v
  Text Cleaning
        |
-       +----------------------+
-       |                      |
-       v                      v
-Intent Classifier      Historical Retrieval
-       |                TF-IDF similarity
-       |                      |
-       +----------+-----------+
-                  |
-                  v
+       +-----------------------+
+       |                       |
+       v                       v
+Intent Classifier       Historical Retrieval
+       |                 TF-IDF similarity
+       |                       |
+       +-----------+-----------+
+                   |
+                   v
           Evidence Availability
-                  |
-           +------+------+
-           |             |
-      Strong evidence  Weak evidence
-           |             |
-           v             v
-      Draft response   Escalate
+             /           \
+            /             \
+     Strong evidence    Weak evidence
+          |                  |
+          v                  v
+   Draft response         Escalate
 
 The system consists of:
 
 TF-IDF + Logistic Regression intent classification
 TF-IDF historical retrieval
-conservative evidence-grounded response generation
+retrieval-grounded response generation
 rule-based escalation
 5. Intent Classifier
 
@@ -130,6 +135,7 @@ TfidfVectorizer(
     max_features=50000,
     sublinear_tf=True
 )
+
 LogisticRegression(
     max_iter=1000,
     class_weight="balanced"
@@ -145,15 +151,13 @@ Historical Apple Support conversations are indexed using TF-IDF.
 
 For each incoming message:
 
-Clean the message.
+Clean the customer message.
 Transform it using the retrieval vectorizer.
-Compare it against historical customer messages.
+Compare it with historical customer messages.
 Retrieve the highest-similarity cases.
-Use the retrieved support response as evidence.
+Use the corresponding historical support response as evidence.
 
-Golden evaluation examples are excluded from the training/retrieval pool to reduce leakage.
-
-The current evaluation uses a leakage-safe corpus.
+The 200 golden examples are excluded from the training/retrieval pool to reduce evaluation leakage.
 
 7. Response Generation
 
@@ -163,10 +167,10 @@ If the best historical match is sufficiently similar, the system generates a con
 
 The response generator:
 
-does not invent troubleshooting instructions
-uses historical support evidence
-asks for additional information when appropriate
-avoids automatically answering when evidence is weak
+does not invent troubleshooting instructions,
+uses historical support evidence,
+asks for additional information when appropriate,
+avoids automatically answering when evidence is weak.
 
 If sufficient historical evidence is unavailable, no automated response is generated.
 
@@ -181,7 +185,7 @@ If the issue persists, please share your device model and
 software version so the issue can be investigated further.
 8. Escalation Policy
 
-The prototype uses historical evidence availability as one of its primary safety signals.
+The primary safety signal is historical evidence availability.
 
 Current retrieval threshold:
 
@@ -200,42 +204,14 @@ Sensitive account/payment-related messages and messages with insufficient contex
 The threshold was selected as a conservative operating point rather than optimized for maximum automation coverage.
 
 9. Evaluation
-Golden dataset
-
-The evaluation set contains 200 manually reviewed examples sampled from the Apple Support conversation pairs.
-
-The golden set contains:
-
-customer message
-historical support response
-human-reviewed intent
-human-reviewed escalation decision
-escalation reason
-
-The evaluation examples are excluded from the training/retrieval pool.
-
-Dataset split
-
-Current evaluation run:
-
-Dataset	Rows
-Apple Support pairs	105,212
-Golden examples	200
-Leakage-safe pool	105,012
-Training rows	84,009
-Internal test rows	21,003
-
-The internal train/test split is separate from the 200-example golden evaluation.
-
-10. Intent Classification Results
-
-Current golden-set results:
-
+Golden-set intent results
 Metric	Result
 Accuracy	63.50%
 Macro F1	63.60%
 Weighted F1	67.83%
-Classification report
+
+Classification report:
+
 Intent	Precision	Recall	F1	Support
 account_payment	0.50	0.67	0.57	3
 apple_services	0.50	1.00	0.67	5
@@ -247,25 +223,22 @@ ios_update	0.91	0.55	0.68	53
 other	0.82	0.59	0.69	93
 wifi_connectivity	0.75	0.75	0.75	4
 
-Small classes should be interpreted cautiously because several intents contain only a few examples.
+Small classes should be interpreted cautiously because several intents contain very few examples.
 
-11. Baselines
+10. Baselines
 
-Two baselines are included in the evaluation design.
+Two simple baselines were evaluated on the same leakage-safe golden-set setup.
 
-Baseline 1 — Majority class
+Model	Accuracy	Macro F1	Weighted F1
+Majority class	40.85%	6.45%	—
+Keyword rules	63.77%	50.52%	62.28%
+TF-IDF + Logistic Regression	63.50%	63.60%	67.83%
 
-Always predict the most frequent intent in the training data.
+The keyword baseline has slightly higher accuracy, but the TF-IDF classifier has substantially higher Macro F1, indicating better performance across the less frequent intents.
 
-This provides a trivial lower-bound comparison.
+The majority-class baseline provides a trivial lower bound.
 
-Baseline 2 — Simple TF-IDF classifier
-
-Use TF-IDF features followed by Logistic Regression without the additional balanced-class configuration used by the main classifier.
-
-The main system is compared against these baselines using accuracy and Macro F1.
-
-12. Escalation Evaluation
+11. Escalation Evaluation
 
 Using the retrieval threshold of 0.55, the current golden-set evaluation gives:
 
@@ -275,48 +248,42 @@ Precision	62.42%
 Recall	81.75%
 F1	70.79%
 
-The system is intentionally conservative about automated handling.
+On the 200-example golden set:
 
-On the 200-example golden set, the threshold resulted in:
+35 / 200 examples = 17.5%
 
-35 / 200 examples eligible for automated reply = 17.5%
+were eligible for automated reply under the retrieval threshold.
 
-The remaining cases were routed toward human handling.
+The current policy intentionally favors human escalation when sufficient historical evidence is unavailable.
 
-The high recall for escalation-labelled cases comes with false positives, meaning the current policy prioritizes avoiding unsupported automated responses over maximizing automation coverage.
-
-13. LLM-as-Judge
+12. LLM-as-Judge
 
 A local Qwen 2.5 3B Instruct model was explored as an LLM judge.
 
-The planned judge evaluates:
+The planned evaluation dimensions were:
 
 relevance: 1–5
 groundedness: 1–5
 helpfulness: 1–5
 hallucination: 0/1
 
-A small 5-example pilot was previously run.
+A small 5-example pilot produced:
 
-Pilot results:
-
-Metric	Score
+Metric	Pilot result
 Relevance	4.20 / 5
 Groundedness	5.00 / 5
 Helpfulness	4.80 / 5
 Hallucination rate	0%
 
-These results are only a pilot and are not used as the headline evaluation result.
+These results are pilot results only and are not used as the headline evaluation.
 
 A larger local run was not completed because the 3B model requires a multi-GB download and substantial local compute.
 
 Human-vs-LLM evidence-judge agreement was therefore not reported, rather than estimated from insufficient data.
 
-14. Top 5 Failure Patterns
+13. Top 5 Failure Patterns
 
 The current golden-set evaluation contains 73 intent errors out of 200 examples.
-
-The main failure patterns are:
 
 1. other → apps
 
@@ -348,29 +315,36 @@ Some messages contain multiple concepts, making mutually exclusive intent bounda
 
 Improvement: introduce hierarchical classification and explicit multi-intent handling.
 
-15. What Is Misleading About My Headline Number?
+14. What Is Misleading About My Headline Number?
 
-The 63.5% accuracy should not be interpreted as production-ready performance.
+The headline result is:
 
-The evaluation set is imbalanced:
+63.5% intent classification accuracy
 
-other: 46.5%
-ios_update: 26.5%
-battery_charging: 10.0%
-apps: 5.0%
-device_hardware: 5.0%
-apple_services: 2.5%
-wifi_connectivity: 2.0%
-account_payment: 1.5%
-how_to: 1.0%
+This number should not be interpreted as production-ready performance.
 
-Therefore, accuracy alone can hide weaknesses in smaller intents.
+The evaluation set is small and imbalanced:
 
-Macro F1 provides a better view of performance across classes, but even Macro F1 should be interpreted cautiously because the evaluation contains only 200 examples and several classes have very small support.
+Intent	Share
+other	46.5%
+ios_update	26.5%
+battery_charging	10.0%
+apps	5.0%
+device_hardware	5.0%
+apple_services	2.5%
+wifi_connectivity	2.0%
+account_payment	1.5%
+how_to	1.0%
 
-The largest limitation is therefore not the headline accuracy itself, but the relatively small and imbalanced evaluation set.
+Accuracy can therefore hide weaknesses in smaller intents.
 
-16. What I Did Not Build
+Macro F1 gives a better view across classes, but it is also uncertain because the evaluation contains only 200 examples and several classes have very small support.
+
+The golden labels were not produced by a fully independent two-reviewer annotation process. A subset was manually audited after initial weak labelling. This is an important limitation when interpreting the result.
+
+The historical Twitter dataset also does not represent current Apple support policy or live customer-support traffic.
+
+15. What I Did Not Build
 
 To keep the project focused, the following were intentionally not implemented:
 
@@ -386,27 +360,28 @@ a general-purpose support agent for every brand
 
 Historical Twitter responses are treated as evidence from the dataset, not as guaranteed representations of Apple's current support policy.
 
-17. Decision Log
-Brand selection — Selected Apple Support because it contains a large number of usable customer/support-response pairs.
-Pair construction — Used in_response_to_tweet_id to connect customer messages with support responses.
-Compact taxonomy — Used nine intents to balance usefulness and sufficient training data.
-other category — Added other for ambiguous or insufficiently specific messages.
-TF-IDF classifier — Selected TF-IDF + Logistic Regression as a fast and interpretable baseline.
-Class weighting — Used balanced class weighting because intent frequencies are uneven.
-Historical retrieval — Used customer-message similarity to retrieve previously handled cases.
-Leakage prevention — Excluded golden examples from the training/retrieval pool.
-Conservative response generation — Used historical responses as evidence rather than inventing troubleshooting steps.
-Escalation threshold — Used retrieval similarity as an evidence-availability signal.
-Conservative automation — Preferred human escalation when historical evidence was insufficient.
-Sensitive cases — Account/payment-related cases are escalated rather than automatically handled.
-Evaluation transparency — Reported the limitations of a 200-example evaluation rather than presenting it as production validation.
-LLM judge — Treated the Qwen evaluation as a pilot and did not use it as the headline metric.
-18. What I Would Build Next Week
+16. Decision Log
+Decision	Reason
+Apple Support	Large number of usable support conversations
+Pair construction	Used in_response_to_tweet_id to connect customer messages with responses
+Compact taxonomy	Nine intents balance usefulness and data availability
+other category	Handles ambiguous or insufficiently specific messages
+TF-IDF classifier	Fast, interpretable and reproducible
+Class weighting	Addresses uneven intent frequencies
+Historical retrieval	Provides evidence from previously handled cases
+Leakage prevention	Golden examples excluded from training/retrieval
+Conservative response generation	Avoids inventing unsupported troubleshooting steps
+Retrieval threshold	Provides an evidence-availability safety signal
+Conservative automation	Escalates when historical evidence is insufficient
+Sensitive-case handling	Account/payment cases are escalated
+Baseline comparison	Separates improvement over trivial and simple approaches
+Evaluation transparency	Reports limitations instead of presenting prototype results as production validation
+17. What I Would Build Next Week
 Golden dataset
 Expand the golden set to 500+ examples.
 Add a second reviewer.
 Measure reviewer disagreement.
-Recalculate metrics on the verified dataset.
+Recalculate metrics on independently verified labels.
 Classification
 Add semantic features.
 Introduce hierarchical classification.
@@ -427,17 +402,17 @@ Tune the similarity threshold using a validation set.
 Separate insufficient evidence from sensitive issues.
 Add explicit account, payment and security safety rules.
 Evaluation
-Expand LLM-as-judge beyond the pilot.
+Expand the LLM-as-judge evaluation.
 Compare LLM judge results with human ratings.
-Measure human-vs-LLM evidence agreement.
-19. Reproduction
+Measure human-vs-LLM agreement.
+18. Reproduction
 1. Download the dataset
 
 Download the Kaggle Customer Support on Twitter dataset:
 
 thoughtvector/customer-support-on-twitter
 
-Place:
+Place the raw file at:
 
 data/raw/twcs.csv
 
@@ -450,13 +425,9 @@ python run.py --data data/raw/twcs.csv
 
 Or provide a custom customer message:
 
-python run.py \
-  --data data/raw/twcs.csv \
-  --query "My iPhone battery is draining very quickly."
+python run.py --data data/raw/twcs.csv --query "My iPhone battery is draining very quickly."
 4. Run evaluation
-python evaluate.py \
-  --data data/raw/twcs.csv \
-  --golden data/golden/apple_support_golden_200_current.csv
+python evaluate.py --data data/raw/twcs.csv --golden data/golden/apple_support_golden_200_current.csv
 
 The evaluation reports:
 
@@ -472,9 +443,9 @@ Runtime
 
 The full pipeline requires the local Kaggle dataset and trains TF-IDF/Logistic Regression models on tens of thousands of examples.
 
-The repository does not claim a sub-15-minute clean-environment runtime, because that runtime has not been independently verified.
+The repository does not claim a sub-15-minute clean-environment runtime because that runtime has not been independently verified.
 
-20. Repository Structure
+19. Repository Structure
 .
 ├── README.md
 ├── requirements.txt
@@ -493,7 +464,7 @@ The repository does not claim a sub-15-minute clean-environment runtime, because
     ├── response_generator.py
     ├── escalation.py
     └── evaluation.py
-21. Limitations
+20. Limitations
 
 The main limitations are:
 
@@ -502,14 +473,15 @@ Historical responses may not represent current Apple support policy.
 The intent taxonomy is dataset-specific.
 The golden set contains only 200 examples.
 Several intents have very small evaluation support.
-TF-IDF retrieval can struggle with semantic similarity when vocabulary differs.
+The labels are not yet independently verified by multiple human reviewers.
+TF-IDF retrieval can struggle when semantically similar messages use different vocabulary.
 The response generator is intentionally conservative.
-Escalation is primarily driven by historical evidence availability and explicit safety rules.
+Escalation is primarily driven by historical evidence availability and safety rules.
 LLM-as-judge was only evaluated as a small pilot.
 Human-vs-LLM judge agreement was not measured.
-22. Summary
+21. Summary
 
-This project demonstrates an end-to-end support-agent prototype:
+This project demonstrates an end-to-end customer-support agent:
 
 Intent Classification
         ↓
@@ -518,41 +490,16 @@ Historical Evidence Retrieval
 Conservative Response Generation
         ↓
 Escalation
+Current results
+63.50% Intent Accuracy
+63.60% Intent Macro F1
+67.83% Intent Weighted F1
+70.79% Escalation F1
+17.5% of golden examples eligible for automated reply
 
-Current golden-set results:
+The main takeaway is that the prototype can classify support requests and retrieve historical evidence, while conservatively escalating cases where evidence is insufficient.
 
-63.50% intent accuracy
-63.60% intent Macro F1
-67.83% intent Weighted F1
-70.79% escalation F1
+The next major improvements are a genuinely independently hand-labelled evaluation set, stronger semantic retrieval, calibrated escalation, and a larger human-vs-LLM response-quality evaluation.
 
-The system intentionally favors evidence-backed responses and human escalation when historical evidence is insufficient.
-
-The next major improvement would be a larger independently verified golden dataset, stronger semantic retrieval, and a validated human-vs-LLM evaluation framework.
-
-### Important correction
-
-I deliberately removed the old **87% / 84.33%** numbers and replaced them with your actual latest run:
-
-**63.50% Accuracy, 63.60% Macro F1, 67.83% Weighted F1.**
-
-Also, I did **not** claim a 30-example LLM evaluation or human-vs-LLM agreement because we didn't complete those.
-
-One thing we should verify next is the **baseline numbers**, because the old README's baseline figures came from an earlier run and shouldn't be carried over without checking.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+**Important:** This version is intentionally transparent about the golden-set labeling and LLM-judge limitations rather than claiming work that wasn't actually completed.
 
