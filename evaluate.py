@@ -10,6 +10,9 @@ from src.data_loader import load_apple_support_pairs
 from src.labeling import create_weak_labels
 
 
+RANDOM_SEED = 42
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", required=True)
@@ -46,6 +49,12 @@ def main():
 
     print(f"Leakage-safe training pool: {len(pairs)}")
 
+    # Make the input order deterministic.
+    # This ensures reproducibility even if the source CSV row order changes.
+    pairs = pairs.sort_values(
+        by="customer_tweet_id"
+    ).reset_index(drop=True)
+
     # --------------------------------------------------
     # Kaggle-style train/test split
     # --------------------------------------------------
@@ -54,7 +63,7 @@ def main():
         pairs["clean_customer_text"],
         pairs["intent"],
         test_size=0.2,
-        random_state=42,
+        random_state=RANDOM_SEED,
         stratify=pairs["intent"]
     )
 
@@ -80,7 +89,8 @@ def main():
 
     classifier = LogisticRegression(
         max_iter=1000,
-        class_weight="balanced"
+        class_weight="balanced",
+        random_state=RANDOM_SEED
     )
 
     classifier.fit(X_train_tfidf, y_train)
@@ -100,7 +110,10 @@ def main():
 
     y_true = golden["gold_intent"].astype(str)
 
-    accuracy = accuracy_score(y_true, predictions)
+    accuracy = accuracy_score(
+        y_true,
+        predictions
+    )
 
     macro_f1 = f1_score(
         y_true,
